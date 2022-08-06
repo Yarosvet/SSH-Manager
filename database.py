@@ -1,6 +1,6 @@
 from db.db_session import create_session
 from db.connections import Connection
-from os import path, mkdir, remove
+import os
 from shutil import copy
 
 
@@ -28,8 +28,8 @@ class Database:
     def register_pem(self, pem_path, e_id):
         with create_session() as session:
             e = session.query(Connection).get(e_id)
-            if path.exists("data/pem/{}.pem".format(e.id)):
-                remove("data/pem/{}.pem".format(e.id))
+            if os.path.exists("data/pem/{}.pem".format(e.id)):
+                os.remove("data/pem/{}.pem".format(e.id))
             copy(pem_path, "data/pem/{}.pem".format(e.id))
             e.pem = "data/pem/{}.pem".format(e.id)
             session.commit()
@@ -37,16 +37,16 @@ class Database:
     def delete_pem(self, e_id):
         with create_session() as session:
             e = session.query(Connection).get(e_id)
-            if e and path.exists("data/pem/{}.pem".format(e.id)):
-                remove("data/pem/{}.pem".format(e.id))
+            if e and os.path.exists("data/pem/{}.pem".format(e.id)):
+                os.remove("data/pem/{}.pem".format(e.id))
             e.pem = None
             session.commit()
 
-    def add_connection_pem(self, name: str, ip: str, port: int, pem_path: str):
-        if not path.exists("data/pem/"):
-            mkdir("data/pem")
+    def add_connection_pem(self, name: str, ip: str, port: int, pem_path: str, user: str):
+        if not os.path.exists("data/pem/"):
+            os.mkdir("data/pem")
         with create_session() as session:
-            conn = Connection(name=name, ip=ip, port=port, auth="pem")
+            conn = Connection(name=name, ip=ip, port=port, auth="pem", user=user)
             session.add(conn)
             session.commit()
             session.refresh(conn)

@@ -1,10 +1,14 @@
 import npyscreen
+import ssh_utils
 from config import *
 from database import Database
 from os.path import abspath
 
 
 class App(npyscreen.StandardApp):
+    def set_var_actOnExit(self, actonexit, ):
+        self.action_on_exit = actonexit
+
     def onStart(self):
         self.database = Database()
         npyscreen.setTheme(npyscreen.Themes.ColorfulTheme)
@@ -18,7 +22,7 @@ class App(npyscreen.StandardApp):
         self.addForm("EDITCONNPEM", EditConnectionPem)
         self.addForm("EDITCONNPASS", EditConnectionPass)
         self.addForm("INVALIDPORTPEMEDIT", InvalidPortPemEdit)
-        self.addForm("INVALIDPORTPASSEDIT", InvalidportPasswordEdit)
+        self.addForm("INVALIDPORTPASSEDIT", InvalidPortPasswordEdit)
         self.addForm("FILEUNSETEDIT", FileUnsetEdit)
         self.addForm("DELETECONN", DeleteConnection)
         self.addForm("DELETECONNEDITPASS", DeleteConnectionEditPass)
@@ -76,7 +80,18 @@ class ConnectionsForm(npyscreen.FormBaseNew):
         if e_id == -1:
             self.parentApp.switchForm("MAIN")
         else:
-            pass  # Todo: connect to host
+            e = self.parentApp.database.get_by_id(e_id=e_id)
+            if not e:
+                return
+            self.erase()
+            if e.auth == "pem":
+                self.parentApp.action_on_exit(ssh_utils.connect_pem, [],
+                                              {'ip': e.ip, 'port': e.port, 'pem_path': abspath(e.pem), 'user': e.user})
+                exit(0)
+            elif e.auth == "password":
+                self.parentApp.action_on_exit(ssh_utils.connect_password, [],
+                                              {'ip': e.ip, 'port': e.port, 'user': e.user, 'password': e.password})
+                exit(0)
 
     def e_pressed(self, _input):
         e_id = self.enum_dict[self.list_conn.values[self.list_conn.cursor_line]]
@@ -137,6 +152,7 @@ class AddConnFormPem(npyscreen.FormBaseNew):
                                  value="Connection #{}".format(self.parentApp.database.get_newrow_id()))
         self.ip_box = self.add(npyscreen.TitleText, name="IP address")
         self.port_box = self.add(npyscreen.TitleText, name="Port", value="22")
+        self.user_box = self.add(npyscreen.TitleText, name="User", value="root")
         self.pemfile_box = self.add(npyscreen.TitleFilenameCombo, name="PEM file")
         self.save_button = self.add(npyscreen.ButtonPress, name="Save", relx=12)
         self.cancel_button = self.add(npyscreen.ButtonPress, name="Cancel", rely=self.save_button.rely,
@@ -157,7 +173,7 @@ class AddConnFormPem(npyscreen.FormBaseNew):
             return
         port = int(self.port_box.value)
         self.parentApp.database.add_connection_pem(name=self.name_box.value, ip=self.ip_box.value, port=port,
-                                                   pem_path=self.pemfile_box.value)
+                                                   pem_path=self.pemfile_box.value, user=self.user_box.value)
         self.parentApp.switchForm("MAIN")
 
     def cancel_handler(self, _input=None):
@@ -230,7 +246,7 @@ class InvalidPortPassword(npyscreen.FormBaseNew):
         self.parentApp.switchForm("ADDCONNPASS")
 
 
-class InvalidportPasswordEdit(InvalidPortPassword):
+class InvalidPortPasswordEdit(InvalidPortPassword):
     def create(self):
         super().create()
         self.button_ok.whenPressed = self.ok_pressed
@@ -249,6 +265,7 @@ class EditConnectionPem(npyscreen.FormBaseNew):
         self.name_box = self.add(npyscreen.TitleText, name="Name")
         self.ip_box = self.add(npyscreen.TitleText, name="IP address")
         self.port_box = self.add(npyscreen.TitleText, name="Port")
+        self.user_box = self.add(npyscreen.TitleText, name="User", value="root")
         self.pemfile_box = self.add(npyscreen.TitleFilenameCombo, name="PEM file")
         self.delete_button = self.add(npyscreen.ButtonPress, name="Delete connection", color='BLACK_YELLOW')
         self.delete_button.whenPressed = self.delete_handler
@@ -265,6 +282,7 @@ class EditConnectionPem(npyscreen.FormBaseNew):
         self.name_box.value = e.name
         self.ip_box.value = e.ip
         self.port_box.value = str(e.port)
+        self.user_box.value = e.user
         self.pemfile_box.value = abspath(e.pem)
 
     def delete_handler(self):
@@ -287,7 +305,7 @@ class EditConnectionPem(npyscreen.FormBaseNew):
         if self.pemfile_box.value != abspath(e.pem):
             new_pem = self.pemfile_box.value
         self.parentApp.database.edit_connection(e.id, name=self.name_box.value, ip=self.ip_box.value, port=port,
-                                                pem=new_pem)
+                                                pem=new_pem, user=self.user_box.value)
         self.parentApp.switchForm("CONNECTIONS")
 
     def cancel_handler(self, _input=None):
