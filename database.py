@@ -1,6 +1,6 @@
 from db.db_session import create_session
 from db.connections import Connection
-from os import path, mkdir
+from os import path, mkdir, remove
 from shutil import copy
 
 
@@ -13,7 +13,7 @@ class Database:
             res["[{}] {}".format(i + 1, l[i].name)] = l[i].id
         return res
 
-    def get_by_id(self, e_id: int):
+    def get_by_id(self, e_id: int) -> Connection:
         with create_session() as session:
             return session.query(Connection).get(e_id)
 
@@ -25,6 +25,15 @@ class Database:
             session.refresh(o)
             return o.id
 
+    def register_pem(self, pem_path, e_id):
+        with create_session() as session:
+            e = session.query(Connection).get(e_id)
+            if path.exists("data/pem/{}.pem".format(e.id)):
+                remove("data/pem/{}.pem".format(e.id))
+            copy(pem_path, "data/pem/{}.pem".format(e.id))
+            e.pem = "data/pem/{}.pem".format(e.id)
+            session.commit()
+
     def add_connection_pem(self, name: str, ip: str, port: int, pem_path: str):
         if not path.exists("data/pem/"):
             mkdir("data/pem")
@@ -33,12 +42,31 @@ class Database:
             session.add(conn)
             session.commit()
             session.refresh(conn)
-            copy(pem_path, "data/pem/{}.pem".format(conn.id))
-            conn.pem = "data/pem/{}.pem".format(conn.id)
-            session.commit()
+            self.register_pem(pem_path=pem_path, e_id=conn.id)
 
     def add_connection_password(self, name: str, ip: str, port: int, user: str, password: str):
         with create_session() as session:
             conn = Connection(name=name, ip=ip, port=port, auth="password", user=user, password=password)
             session.add(conn)
+            session.commit()
+
+    def edit_connection(self, e_id, name=None, ip=None, port=None, auth=None, pem=None, user=None, password=None):
+        with create_session() as session:
+            e = session.query(Connection).get(e_id)
+            if not e:
+                return
+            if name:
+                e.name = name
+            if ip:
+                e.ip = ip
+            if port:
+                e.port = port
+            if auth:
+                e.auth = auth
+            if pem:
+                self.register_pem(pem_path=pem, e_id=e_id)
+            if user:
+                e.user = user
+            if password:
+                e.password = password
             session.commit()

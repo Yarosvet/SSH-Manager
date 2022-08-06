@@ -1,6 +1,7 @@
 import npyscreen
 from config import *
 from database import Database
+from os.path import abspath
 
 
 class App(npyscreen.StandardApp):
@@ -14,6 +15,11 @@ class App(npyscreen.StandardApp):
         self.addForm("INVALIDPORTPEM", InvalidPortPem)
         self.addForm("INVALIDPORTPASS", InvalidPortPassword)
         self.addForm("FILEUNSET", FileUnset)
+        self.addForm("EDITCONNPEM", EditConnectionPem)
+        self.addForm("EDITCONNPASS", EditConnectionPass)
+        self.addForm("INVALIDPORTPEMEDIT", InvalidPortPemEdit)
+        self.addForm("INVALIDPORTPASSEDIT", InvalidportPasswordEdit)
+        self.addForm("FILEUNSETEDIT", FileUnsetEdit)
 
 
 class MenuForm(npyscreen.FormBaseNew):
@@ -67,8 +73,18 @@ class ConnectionsForm(npyscreen.FormBaseNew):
             pass  # Todo: connect to host
 
     def e_pressed(self, _input):
-
-        pass  # Todo: edit connection
+        e_id = self.enum_dict[self.list_conn.values[self.list_conn.cursor_line]]
+        e = self.parentApp.database.get_by_id(e_id)
+        if not e:
+            return
+        if e.auth == "pem":
+            self.parentApp._Forms["EDITCONNPEM"].set_conn_id(e_id)
+            self.parentApp._Forms["EDITCONNPEM"].update_fields()
+            self.parentApp.switchForm("EDITCONNPEM")
+        elif e.auth == "password":
+            self.parentApp._Forms["EDITCONNPASS"].set_conn_id(e_id)
+            self.parentApp._Forms["EDITCONNPASS"].update_fields()
+            self.parentApp.switchForm("EDITCONNPASS")
 
 
 class AddConnFormPass(npyscreen.FormBaseNew):
@@ -137,54 +153,176 @@ class AddConnFormPem(npyscreen.FormBaseNew):
 
 
 class InvalidPortPem(npyscreen.FormBaseNew):
-    DEFAULT_LINES = 5
-    DEFAULT_COLUMNS = 24
+    DEFAULT_LINES = 7
+    DEFAULT_COLUMNS = 25
     SHOW_ATX = 10
     SHOW_ATY = 2
 
     def create(self):
         y, x = self.parentApp._Forms["ADDCONNPEM"].useable_space()
-        self.name = "Invalid port number"
         self.SHOW_ATX = (x - self.DEFAULT_COLUMNS) // 2
         self.SHOW_ATY = (y - self.DEFAULT_LINES) // 2
-        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 2)
+        self.caption = self.add(npyscreen.FixedText, value="Invalid port number", editable=False)
+        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 3,
+                                  rely=self.caption.rely + 2)
         self.button_ok.whenPressed = self.ok_pressed
 
     def ok_pressed(self):
         self.parentApp.switchForm("ADDCONNPEM")
+
+
+class InvalidPortPemEdit(InvalidPortPem):
+    def create(self):
+        super().create()
+        self.button_ok.whenPressed = self.ok_pressed
+
+    def ok_pressed(self):
+        self.parentApp.switchForm("EDITCONNPEM")
 
 
 class FileUnset(npyscreen.FormBaseNew):
-    DEFAULT_LINES = 5
-    DEFAULT_COLUMNS = 26
+    DEFAULT_LINES = 7
+    DEFAULT_COLUMNS = 30
     SHOW_ATX = 10
     SHOW_ATY = 2
 
     def create(self):
         y, x = self.parentApp._Forms["ADDCONNPEM"].useable_space()
-        self.name = "PEM file not selected"
         self.SHOW_ATX = (x - self.DEFAULT_COLUMNS) // 2
         self.SHOW_ATY = (y - self.DEFAULT_LINES) // 2
-        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 2)
+        self.caption = self.add(npyscreen.FixedText, value="PEM file is not selected", editable=False)
+        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 3,
+                                  rely=self.caption.rely + 2)
         self.button_ok.whenPressed = self.ok_pressed
 
     def ok_pressed(self):
         self.parentApp.switchForm("ADDCONNPEM")
 
 
+class FileUnsetEdit(FileUnset):
+    def create(self):
+        super().create()
+        self.button_ok.whenPressed = self.ok_pressed
+
+    def ok_pressed(self):
+        self.parentApp.switchForm("EDITCONNPEM")
+
+
 class InvalidPortPassword(npyscreen.FormBaseNew):
-    DEFAULT_LINES = 5
-    DEFAULT_COLUMNS = 24
+    DEFAULT_LINES = 7
+    DEFAULT_COLUMNS = 25
     SHOW_ATX = 10
     SHOW_ATY = 2
 
     def create(self):
         y, x = self.parentApp._Forms["ADDCONNPASS"].useable_space()
-        self.name = "Invalid port number"
         self.SHOW_ATX = (x - self.DEFAULT_COLUMNS) // 2
         self.SHOW_ATY = (y - self.DEFAULT_LINES) // 2
-        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 2)
+        self.caption = self.add(npyscreen.FixedText, value="Invalid port number", editable=False)
+        self.button_ok = self.add(npyscreen.ButtonPress, name="OK", relx=self.useable_space()[1] // 2 - 3,
+                                  rely=self.caption.rely + 2)
         self.button_ok.whenPressed = self.ok_pressed
 
     def ok_pressed(self):
         self.parentApp.switchForm("ADDCONNPASS")
+
+
+class InvalidportPasswordEdit(InvalidPortPassword):
+    def create(self):
+        super().create()
+        self.button_ok.whenPressed = self.ok_pressed
+
+    def ok_pressed(self):
+        self.parentApp.switchForm("EDITCONNPASS")
+
+
+class EditConnectionPem(npyscreen.FormBaseNew):
+    def set_conn_id(self, conn_id):
+        self.conn_id = conn_id
+
+    def create(self):
+        self.add_handlers({"^X": self.cancel_handler})
+        self.name_box = self.add(npyscreen.TitleText, name="Name")
+        self.ip_box = self.add(npyscreen.TitleText, name="IP address")
+        self.port_box = self.add(npyscreen.TitleText, name="Port")
+        self.pemfile_box = self.add(npyscreen.TitleFilenameCombo, name="PEM file")
+        self.delete_button = self.add(npyscreen.ButtonPress, name="Delete connection", color='BLACK_YELLOW')
+        self.save_button = self.add(npyscreen.ButtonPress, name="Save", relx=12)
+        self.cancel_button = self.add(npyscreen.ButtonPress, name="Cancel", rely=self.save_button.rely,
+                                      relx=self.save_button.relx + 11)
+        self.save_button.whenPressed = self.save_handler
+        self.cancel_button.whenPressed = self.cancel_handler
+
+    def update_fields(self):
+        e = self.parentApp.database.get_by_id(self.conn_id)
+        if not e:
+            return
+        self.name_box.value = e.name
+        self.ip_box.value = e.ip
+        self.port_box.value = str(e.port)
+        self.pemfile_box.value = abspath(e.pem)
+
+    def save_handler(self):
+        if not self.port_box.value.isdigit():
+            self.parentApp.switchForm("INVALIDPORTPEMEDIT")
+            return
+        if self.pemfile_box.value is None:
+            self.parentApp.switchForm("FILEUNSETEDIT")
+            return
+        e = self.parentApp.database.get_by_id(self.conn_id)
+        if not e:
+            return
+        port = int(self.port_box.value)
+        new_pem = None
+        if self.pemfile_box.value != abspath(e.pem):
+            new_pem = self.pemfile_box.value
+        self.parentApp.database.edit_connection(e.id, name=self.name_box.value, ip=self.ip_box.value, port=port,
+                                                pem=new_pem)
+        self.parentApp.switchForm("CONNECTIONS")
+
+    def cancel_handler(self, _input=None):
+        self.parentApp.switchForm("CONNECTIONS")
+
+
+class EditConnectionPass(npyscreen.FormBaseNew):
+    def set_conn_id(self, conn_id):
+        self.conn_id = conn_id
+
+    def create(self):
+        self.add_handlers({"^X": self.cancel_handler})
+        self.name_box = self.add(npyscreen.TitleText, name="Name")
+        self.ip_box = self.add(npyscreen.TitleText, name="IP address")
+        self.port_box = self.add(npyscreen.TitleText, name="Port")
+        self.user_box = self.add(npyscreen.TitleText, name="User")
+        self.password_box = self.add(npyscreen.TitlePassword, name="Password")
+        self.delete_button = self.add(npyscreen.ButtonPress, name="Delete connection", color='BLACK_YELLOW')
+        self.save_button = self.add(npyscreen.ButtonPress, name="Save", relx=12)
+        self.cancel_button = self.add(npyscreen.ButtonPress, name="Cancel", rely=self.save_button.rely,
+                                      relx=self.save_button.relx + 11)
+        self.save_button.whenPressed = self.save_handler
+        self.cancel_button.whenPressed = self.cancel_handler
+
+    def update_fields(self):
+        e = self.parentApp.database.get_by_id(self.conn_id)
+        if not e:
+            return
+        self.name_box.value = e.name
+        self.ip_box.value = e.ip
+        self.port_box.value = str(e.port)
+        self.user_box.value = e.user
+        self.password_box.value = e.password
+
+    def save_handler(self):
+        if not self.port_box.value.isdigit():
+            self.parentApp.switchForm("INVALIDPORTPASSEDIT")
+            return
+        e = self.parentApp.database.get_by_id(self.conn_id)
+        if not e:
+            return
+        port = int(self.port_box.value)
+        self.parentApp.database.edit_connection(e.id, name=self.name_box.value, ip=self.ip_box.value, port=port,
+                                                user=self.user_box.value, password=self.password_box.value)
+        self.parentApp.switchForm("CONNECTIONS")
+
+    def cancel_handler(self, _input=None):
+        self.parentApp.switchForm("CONNECTIONS")
