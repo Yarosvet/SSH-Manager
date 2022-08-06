@@ -34,6 +34,14 @@ class Database:
             e.pem = "data/pem/{}.pem".format(e.id)
             session.commit()
 
+    def delete_pem(self, e_id):
+        with create_session() as session:
+            e = session.query(Connection).get(e_id)
+            if e and path.exists("data/pem/{}.pem".format(e.id)):
+                remove("data/pem/{}.pem".format(e.id))
+            e.pem = None
+            session.commit()
+
     def add_connection_pem(self, name: str, ip: str, port: int, pem_path: str):
         if not path.exists("data/pem/"):
             mkdir("data/pem")
@@ -69,4 +77,13 @@ class Database:
                 e.user = user
             if password:
                 e.password = password
+            session.commit()
+
+    def delete_connection(self, e_id):
+        with create_session() as session:
+            e = session.query(Connection).get(e_id)
+            if not e:
+                return
+            self.delete_pem(e_id)
+            session.delete(e)
             session.commit()
