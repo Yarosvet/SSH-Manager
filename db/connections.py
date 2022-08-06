@@ -11,4 +11,5 @@ class Connection(SqlAlchemyBase):
     port = Column(Integer)
     auth = Column(Text)
     pem = Column(Text)
+    user = Column(Text)
     password = Column(Text)

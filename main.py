@@ -1,6 +1,5 @@
 from config import *
 from db import db_session
-from database import Database
 from tui import App
 
 
