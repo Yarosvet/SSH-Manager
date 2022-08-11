@@ -5,6 +5,7 @@ from threading import Thread
 from os import mkdir, path
 import sys
 import curses
+import signal
 
 action_on_exit = None
 args = []
@@ -30,13 +31,16 @@ def main():
     application.run()
 
 
+def clean_exit(sig=None, frame=None):
+    curses.endwin()
+    sys.exit()
+
+
 if __name__ == "__main__":
-    try:
-        tui_thread = Thread(target=main, daemon=True)
-        tui_thread.start()
-        tui_thread.join()
-        if action_on_exit is not None:
-            action_on_exit(*args, **kwargs)
-    except KeyboardInterrupt:
-        curses.endwin()
-        sys.exit()
+    signal.signal(signal.SIGINT, clean_exit)
+    signal.signal(signal.SIGTERM, clean_exit)
+    tui_thread = Thread(target=main, daemon=True)
+    tui_thread.start()
+    tui_thread.join()
+    if action_on_exit is not None:
+        action_on_exit(*args, **kwargs)
