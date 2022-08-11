@@ -1,2 +1,3 @@
 version = "0.1"
-db_file = "data/db.sqlite"
+db_dir = "data"
+db_file = "db.sqlite"

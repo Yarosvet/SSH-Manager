@@ -2,6 +2,7 @@ from config import *
 from db import db_session
 from tui import App
 from threading import Thread
+from os import mkdir, path
 
 action_on_exit = None
 args = []
@@ -19,7 +20,9 @@ def set_act_on_exit(func, a_args, a_kwargs):
 
 def main():
     global action_on_exit
-    db_session.global_init(db_file=db_file)
+    if not path.exists(db_dir):
+        mkdir(db_dir)
+    db_session.global_init(db_file=path.join(db_dir, db_file))
     application = App()
     application.set_var_actOnExit(set_act_on_exit)
     application.run()
