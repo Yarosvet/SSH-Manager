@@ -4,6 +4,7 @@ from tui import App
 from threading import Thread
 from os import mkdir, path
 import sys
+import curses
 
 action_on_exit = None
 args = []
@@ -31,10 +32,11 @@ def main():
 
 if __name__ == "__main__":
     try:
-        tui_thread = Thread(target=main)
+        tui_thread = Thread(target=main, daemon=True)
         tui_thread.start()
         tui_thread.join()
         if action_on_exit is not None:
             action_on_exit(*args, **kwargs)
     except KeyboardInterrupt:
+        curses.endwin()
         sys.exit()
