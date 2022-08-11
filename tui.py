@@ -307,6 +307,7 @@ class EditConnectionPem(npyscreen.FormBaseNew):
             new_pem = self.pemfile_box.value
         self.parentApp.database.edit_connection(e.id, name=self.name_box.value, ip=self.ip_box.value, port=port,
                                                 pem=new_pem, user=self.user_box.value)
+        self.parentApp._Forms["CONNECTIONS"].update_fields()
         self.parentApp.switchForm("CONNECTIONS")
 
     def cancel_handler(self, _input=None):
@@ -358,6 +359,7 @@ class EditConnectionPass(npyscreen.FormBaseNew):
         port = int(self.port_box.value)
         self.parentApp.database.edit_connection(e.id, name=self.name_box.value, ip=self.ip_box.value, port=port,
                                                 user=self.user_box.value, password=self.password_box.value)
+        self.parentApp._Forms["CONNECTIONS"].update_fields()
         self.parentApp.switchForm("CONNECTIONS")
 
     def cancel_handler(self, _input=None):
