@@ -3,6 +3,7 @@ from db import db_session
 from tui import App
 from threading import Thread
 from os import mkdir, path
+import sys
 
 action_on_exit = None
 args = []
@@ -36,4 +37,4 @@ if __name__ == "__main__":
         if action_on_exit is not None:
             action_on_exit(*args, **kwargs)
     except KeyboardInterrupt:
-        exit()
+        sys.exit()

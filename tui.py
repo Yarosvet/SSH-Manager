@@ -3,6 +3,7 @@ import ssh_utils
 from config import *
 from database import Database
 from os.path import abspath
+import sys
 
 
 class App(npyscreen.StandardApp):
@@ -50,7 +51,7 @@ class MenuForm(npyscreen.FormBaseNew):
         self.parentApp.switchForm("ADDCONNPEM")
 
     def on_exit(self):
-        exit(0)
+        sys.exit()
 
     menu_elements = {"Connections": go_connections,
                      "Add connection using password": go_addconnpass,
@@ -87,11 +88,11 @@ class ConnectionsForm(npyscreen.FormBaseNew):
             if e.auth == "pem":
                 self.parentApp.action_on_exit(ssh_utils.connect_pem, [],
                                               {'ip': e.ip, 'port': e.port, 'pem_path': abspath(e.pem), 'user': e.user})
-                exit(0)
+                sys.exit()
             elif e.auth == "password":
                 self.parentApp.action_on_exit(ssh_utils.connect_password, [],
                                               {'ip': e.ip, 'port': e.port, 'user': e.user, 'password': e.password})
-                exit(0)
+                sys.exit()
 
     def e_pressed(self, _input):
         e_id = self.enum_dict[self.list_conn.values[self.list_conn.cursor_line]]
