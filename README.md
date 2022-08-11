@@ -9,7 +9,7 @@ ___
 pip3 install -r requirements.txt
 python3 main.py
 ```
-# Compilation
+# Build
 Install *pyinstaller*
 ```
 pip3 install pyinstaller
